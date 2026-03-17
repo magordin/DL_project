@@ -10,13 +10,13 @@ def main():
     adata = ad.read_h5ad(raw_data / "bulk_processed_genes.h5ad", backed='r')
     print('Bulk data loaded')
 
-    processed = normalize(adata[:2000].to_memory())
-    processed_hvg = select_hvg(processed, 1000)
+    processed = normalize(adata.to_memory())
+    processed_hvg = select_hvg(processed, 5000)
 
     processed_data.mkdir(parents=True, exist_ok=True) 
     print(f"Saving to {processed_data}...")
 
-    processed_hvg.write(processed_data / "bulk_hvg_normalized_test.h5ad")
+    processed_hvg.write(processed_data / "bulk_hvg_normalized.h5ad")
     print('Preprocessing complete')
 
 if __name__ == "__main__":
