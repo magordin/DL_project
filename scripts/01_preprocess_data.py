@@ -13,10 +13,8 @@ def main():
     processed = normalize(adata[:2000].to_memory())
     processed_hvg = select_hvg(processed, 1000)
 
-    processed_data_path = Path("/work3/s252608/DL_project/data/processed")
-    processed_data_path.mkdir(parents=True, exist_ok=True) 
-    
-    print(f"Saving to {processed_data_path}...")
+    processed_data.mkdir(parents=True, exist_ok=True) 
+    print(f"Saving to {processed_data}...")
 
     processed_hvg.write(processed_data / "bulk_hvg_normalized_test.h5ad")
     print('Preprocessing complete')
