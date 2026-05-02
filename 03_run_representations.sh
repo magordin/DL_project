@@ -52,7 +52,7 @@ for REPR in ${REPRESENTATIONS}; do
 
   REPR_FILE="${REPR_DIR}/${DATASET_NAME}_${REPR}_hvg${N_HVG}_${TARGET_MODE}_dim${LATENT_DIM}.npy"
 
-  "${PYTHON_BIN}" "${SCRIPT_DIR}/02_build_representation.py" \
+  "${PYTHON_BIN}" "${SCRIPT_DIR}/02_build_representations.py" \
     --input-h5ad "${X_HVG}" \
     --repr-type "${REPR}" \
     --latent-dim "${LATENT_DIM}" \
