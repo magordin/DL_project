@@ -8,6 +8,7 @@ data/
 test/
 results/
 lib/
+logs/
 
 # Environments
 .env
