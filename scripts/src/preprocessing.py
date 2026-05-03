@@ -25,7 +25,7 @@ def normalize(adata, target_sum=1e4):
     return adata
 
 
-def select_hvgs(adata, n_top=3000):
+def select_hvgs(adata, n_top=8000):
     sc.pp.highly_variable_genes(
         adata, 
         n_top_genes=n_top, 
