@@ -2,9 +2,9 @@
 #BSUB -J qc
 #BSUB -n 1
 #BSUB -R "rusage[mem=32GB]"
-#BSUB -W 24:00
-#BSUB -o /work3/s252608/DL_project/logs/qc_%J.out
-#BSUB -e /work3/s252608/DL_project/logs/qc_%J.err
+#BSUB -W 10:00
+#BSUB -o /zhome/bf/7/219671/projects/DL_project/results/logs/pre_%J.out
+#BSUB -e /zhome/bf/7/219671/projects/DL_project/results/logs/pre_%J.err
 
 set -euo pipefail
 
@@ -23,7 +23,7 @@ RAW_GENE_H5AD="${RAW_DATA_PATH}/${DATASET_NAME}_genes.h5ad"
 RAW_TX_H5AD="${RAW_DATA_PATH}/${DATASET_NAME}_transcripts.h5ad"
 MAPPING_JSON="${RAW_DATA_PATH}/${DATASET_NAME}_gene_to_transcripts.json"
 
-QC_TABLE="${QC_PATH}/bulk_qc.csv"
+QC_TABLE="${QC_PATH}/bulk_processed_qc_relaxed_labels.csv"
 
 source "${VENV_PATH}/bin/activate"
 PYTHON_BIN="${VENV_PATH}/bin/python"
@@ -35,16 +35,12 @@ for file in "$RAW_GENE_H5AD" "$RAW_TX_H5AD" "$MAPPING_JSON" "$QC_TABLE"; do
     fi
 done
 
-echo "Target mode: ${TARGET_MODE}"
-echo "N_HVG: ${N_HVG}"
-
-"${PYTHON_BIN}" "${SCRIPT_DIR}/01_preprocess_data.py" \
+"${PYTHON_BIN}" -m scripts.01_preprocess_data \
   --gene-h5ad "${RAW_GENE_H5AD}" \
   --tx-h5ad "${RAW_TX_H5AD}" \
   --mapping-json "${MAPPING_JSON}" \
   --qc-csv "${QC_TABLE}" \
   --out-dir "${PROCESSED_PATH}" \
-  --data-type "bulk" \
-  --n-top 3000
+  --data-type "bulk"
 
 echo "Processing complete. Files saved to ${PROCESSED_PATH}"

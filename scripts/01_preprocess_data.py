@@ -1,8 +1,11 @@
 from scripts.src.preprocessing import *
 import argparse
+import logging
 from pathlib import Path
 import pandas as pd
 import anndata as ad
+
+logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
 
 
 def parse_args():
@@ -14,40 +17,43 @@ def parse_args():
     parser.add_argument("--out-dir", type=str, required=True, help="Directory to save processed data")
     
     parser.add_argument("--data-type", type=str, default="bulk", choices=["bulk", "sc"])
-    parser.add_argument("--n-top", type=int, default=3000, help="Number of HVGs to select")
     return parser.parse_args()
+
+
+def subset_and_align_data(gene_adata, iso_adata, qc_csv_path, mapping):
+    qc_results = pd.read_csv(qc_csv_path)
+    retained_genes = qc_results[qc_results['qc_pass_relaxed']]['gene_id'].to_list()
+
+    valid_genes = [g for g in retained_genes if g in gene_adata.var_names]
+    logging.info(f"Retaining {len(valid_genes)} genes after QC filtering.")
+
+    gene_sub = gene_adata[:, valid_genes].to_memory()
+    valid_gene_set = set(valid_genes)
+    target_iso_ids = [t for g in valid_genes if g in mapping for t in mapping[g]]
+    final_iso_ids = [t for t in target_iso_ids if t in iso_adata.var_names]
+    iso_sub = iso_adata[gene_sub.obs_names, final_iso_ids].to_memory()
+    
+    return gene_sub, iso_sub
 
 
 def main():
     args = parse_args()
-    out_path = Path(args.out_dir)
-    out_path.mkdir(parents=True, exist_ok=True)
+    out_dir = Path(args.out_dir)
+    out_dir.mkdir(parents=True, exist_ok=True)
 
-    raw_genes_bulk = ad.read_h5ad(args.gene_h5ad, backed='r')
-    raw_iso_bulk = ad.read_h5ad(args.tx_h5ad, backed='r')
-
+    logging.info("Loading h5ad files...")
+    raw_genes = ad.read_h5ad(args.gene_h5ad, backed='r')
+    raw_iso = ad.read_h5ad(args.tx_h5ad, backed='r')
     mapping = get_gene_mapping(args.mapping_json)
+    gene_sub, iso_sub = subset_and_align_data(raw_genes, raw_iso, args.qc_csv, mapping)
 
-    qc_results = pd.read_csv(args.qc_csv)
-    retained_genes = qc_results['gene_id'].to_list()
+    gene_sub = normalize(gene_sub)
+    iso_sub = get_isoform_proportions(iso_sub, mapping)
 
-    valid_retained_genes = [g for g in retained_genes if g in raw_genes_bulk.var_names]
-    raw_genes_bulk_sub = raw_genes_bulk[:, valid_retained_genes].to_memory()
-
-    adata_bulk_hvg = select_hvgs(raw_genes_bulk_sub, n_top=args.n_top)
-    hvg_list = adata_bulk_hvg.var_names.tolist()
-
-    adata_bulk_input = normalize(adata_bulk_hvg.copy())
-    save_adata(adata_bulk_input, args.out_dir, args.data_type, "x_input")
-
-    target_iso_ids = [t for g in hvg_list if g in mapping for t in mapping[g]]
-    final_iso_ids = [t for t in target_iso_ids if t in raw_iso_bulk.var_names]
+    save_adata(gene_sub, out_dir, args.data_type, "x_input")
+    save_adata(iso_sub, out_dir, args.data_type, "y_target")
     
-    adata_iso_target = raw_iso_bulk[adata_bulk_input.obs_names, final_iso_ids].to_memory()
-    adata_iso_target.obs['library_size'] = adata_iso_target.X.sum(axis=1).A1
-
-    save_adata(adata_iso_target, args.out_dir, args.data_type, "y_target")
-    print(f"{args.data_type.capitalize()} processing complete.")
+    logging.info(f"Preprocessing for {args.data_type} complete.")
 
 
 if __name__ == "__main__":

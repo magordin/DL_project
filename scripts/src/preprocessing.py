@@ -1,9 +1,11 @@
 import scanpy as sc
+import logging
 import json
 import numpy as np
 from pathlib import Path
 import anndata as ad
 import pandas as pd
+from scipy.sparse import issparse
 
 
 class NumpyEncoder(json.JSONEncoder):
@@ -25,19 +27,6 @@ def normalize(adata, target_sum=1e4):
     return adata
 
 
-def select_hvgs(adata, n_top=8000):
-    sc.pp.highly_variable_genes(
-        adata, 
-        n_top_genes=n_top, 
-        flavor='seurat_v3'
-    )
-    final_hvg_indices = adata.var.highly_variable
-    adata_final = adata[:, final_hvg_indices].copy()
-    
-    print(f"Selected the top {adata_final.n_vars} HVGs.")
-    return adata_final
-
-
 def save_adata(adata, out_dir, data_type, suffix):
     out_path = Path(out_dir)
     out_name = f"{data_type}_normalized_{suffix}.h5ad"
@@ -45,10 +34,60 @@ def save_adata(adata, out_dir, data_type, suffix):
     print(f"Saved {data_type} {suffix} with {adata.n_vars} variables.\n")
 
 
-def get_gene_mapping(mapping_json_path):
+def get_gene_mapping(mapping_json_path, adata):
     json_path = Path(mapping_json_path)
     if json_path.exists():
         with open(json_path, 'r') as f:
             return json.load(f)
+    if adata is not None:
+        logging.warning(f"Mapping {json_path} not found. Generating from adata...")
+        
+        if 'gene_id' not in adata.var.columns:
+            raise KeyError("adata.var must have a 'gene_id' column to generate mapping.")
+
+        mapping = {}
+        for tx_id, gene_id in zip(adata.var_names, adata.var['gene_id']):
+            if gene_id not in mapping:
+                mapping[gene_id] = []
+            mapping[gene_id].append(tx_id)
+
+        json_path.parent.mkdir(parents=True, exist_ok=True)
+        with open(json_path, 'w') as f:
+            json.dump(mapping, f, indent=4, cls=NumpyEncoder)
+            
+        logging.info(f"Successfully generated and saved mapping for {len(mapping)} genes.")
+        return mapping
+    
     else:
-        raise FileNotFoundError(f"Mapping file not found at {json_path}")
+        raise FileNotFoundError(
+            f"Mapping file {json_path} not found; no adata provided to generate it.")
+    
+
+def get_isoform_proportions(adata, mapping):
+    adata = adata.copy()
+    if issparse(adata.X):
+        X = adata.X.tocsr()
+    else:
+        X = adata.X
+
+    proportions = np.zeros(X.shape, dtype=np.float32)
+    var_idx = {name: i for i, name in enumerate(adata.var_names)}
+
+    for gene, isoforms in mapping.items():
+        indices = [var_idx[iso] for iso in isoforms if iso in var_idx]
+        
+        if not indices:
+            continue
+            
+        gene_sum = X[:, indices].sum(axis=1)
+        if hasattr(gene_sum, "A1"):
+            gene_sum = gene_sum.A1
+
+        denom = np.where(gene_sum == 0, 1.0, gene_sum)
+        
+        for idx in indices:
+            col_data = X[:, idx].toarray().flatten() if issparse(X) else X[:, idx]
+            proportions[:, idx] = col_data / denom
+
+    adata.layers["isoform_proportions"] = proportions
+    return adata

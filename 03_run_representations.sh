@@ -1,10 +1,12 @@
 #!/usr/bin/env bash
-set -euo pipefail
+#BSUB -J repr
+#BSUB -n 1
+#BSUB -R "rusage[mem=32GB]"
+#BSUB -W 02:00
+#BSUB -o /zhome/bf/7/219671/projects/DL_project/results/logs/repr_%J.out
+#BSUB -e /zhome/bf/7/219671/projects/DL_project/results/logs/repr_%J.err
 
-############################################
-# run_representations.sh
-# Build representations from final X input
-############################################
+set -euo pipefail
 
 PROJECT_ROOT="/work3/s252608/DL_project"
 SCRIPT_DIR="${PROJECT_ROOT}/scripts"
@@ -15,45 +17,44 @@ REPRESENTATIONS_PATH="${PROJECT_ROOT}/data/representations"
 
 mkdir -p "${REPRESENTATIONS_PATH}"
 
+# --- Settings ---
 DATASET_NAME="${DATASET_NAME:-bulk}"
-N_HVG="${N_HVG:-3000}"
-TARGET_MODE="${TARGET_MODE:-absolute}"
-
-X_HVG="${PROCESSED_PATH}/${DATASET_NAME}_x_hvg_${N_HVG}_${TARGET_MODE}.h5ad"
-
-REPRESENTATIONS="${REPRESENTATIONS:-hvg pca vae geneformer}"
 LATENT_DIM="${LATENT_DIM:-128}"
 SEED="${SEED:-1}"
+REPRESENTATIONS="${REPRESENTATIONS:-raw pca vae}" 
+
+INPUT_X="${PROCESSED_PATH}/${DATASET_NAME}_normalized_x_input.h5ad"
 
 if [[ ! -d "${VENV_PATH}" ]]; then
   echo "ERROR: .venv not found at ${VENV_PATH}"
   exit 1
 fi
 
-# shellcheck disable=SC1091
 source "${VENV_PATH}/bin/activate"
 PYTHON_BIN="${VENV_PATH}/bin/python"
 
-if [[ ! -f "${X_HVG}" ]]; then
-  echo "ERROR: missing X input file -> ${X_HVG}"
+if [[ ! -f "${INPUT_X}" ]]; then
+  echo "ERROR: missing X input file -> ${INPUT_X}"
   exit 1
 fi
 
 echo "========================================"
-echo "[REPRESENTATIONS] Building representations"
+echo "[REPRESENTATIONS] Building PCA from 2.2k genes"
 echo "========================================"
-echo "Input: ${X_HVG}"
+echo "Input: ${INPUT_X}"
+
+cd "${PROJECT_ROOT}"
 
 for REPR in ${REPRESENTATIONS}; do
-  echo "---- Representation: ${REPR}"
+  echo "---- Target Representation: ${REPR}"
 
   REPR_DIR="${REPRESENTATIONS_PATH}/${REPR}"
   mkdir -p "${REPR_DIR}"
 
-  REPR_FILE="${REPR_DIR}/${DATASET_NAME}_${REPR}_hvg${N_HVG}_${TARGET_MODE}_dim${LATENT_DIM}.npy"
+  REPR_FILE="${REPR_DIR}/${DATASET_NAME}_${REPR}_dim${LATENT_DIM}.npy"
 
-  "${PYTHON_BIN}" "${SCRIPT_DIR}/02_build_representations.py" \
-    --input-h5ad "${X_HVG}" \
+  "${PYTHON_BIN}" -m scripts.02_build_representations \
+    --input-h5ad "${INPUT_X}" \
     --repr-type "${REPR}" \
     --latent-dim "${LATENT_DIM}" \
     --seed "${SEED}" \
@@ -61,3 +62,5 @@ for REPR in ${REPRESENTATIONS}; do
 
   echo "Saved: ${REPR_FILE}"
 done
+
+echo "Representation building complete."

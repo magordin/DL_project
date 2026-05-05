@@ -2,12 +2,12 @@ import anndata as ad
 import numpy as np
 import argparse
 from pathlib import Path
-from scripts.src.representations import generate_pca_representation, get_hvg_raw
+from scripts.src.representations import generate_pca_representation
 
 def parse_args():
-    parser = argparse.ArgumentParser(description="Build representations from HVG data.")
+    parser = argparse.ArgumentParser(description="Build representations from filtered data.")
     parser.add_argument("--input-h5ad", type=str, required=True, help="Path to input X h5ad")
-    parser.add_argument("--repr-type", type=str, required=True, choices=["hvg", "pca", "vae", "geneformer"])
+    parser.add_argument("--repr-type", type=str, required=True, choices=["raw", "pca", "vae", "geneformer"])
     parser.add_argument("--latent-dim", type=int, default=128)
     parser.add_argument("--seed", type=int, default=1)
     parser.add_argument("--out-file", type=str, required=True, help="Specific path for .npy output")
@@ -20,7 +20,7 @@ def main():
 
     print(f"Generating {args.repr_type} representation...")
   
-    if args.repr_type == "hvg":
+    if args.repr_type == "raw":
         repr_matrix = adata.X.toarray() if hasattr(adata.X, "toarray") else adata.X
         
     elif args.repr_type == "pca":
