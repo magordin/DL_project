@@ -64,30 +64,18 @@ def get_gene_mapping(mapping_json_path, adata):
     
 
 def get_isoform_proportions(adata, mapping):
-    adata = adata.copy()
-    if issparse(adata.X):
-        X = adata.X.tocsr()
-    else:
-        X = adata.X
-
-    proportions = np.zeros(X.shape, dtype=np.float32)
-    var_idx = {name: i for i, name in enumerate(adata.var_names)}
+    X = adata.X.toarray() if issparse(adata.X) else adata.X.copy()
+    var_names = adata.var_names.values
+    var_idx = {name: i for i, name in enumerate(var_names)}
 
     for gene, isoforms in mapping.items():
         indices = [var_idx[iso] for iso in isoforms if iso in var_idx]
         
         if not indices:
             continue
-            
-        gene_sum = X[:, indices].sum(axis=1)
-        if hasattr(gene_sum, "A1"):
-            gene_sum = gene_sum.A1
+        gene_sum = X[:, indices].sum(axis=1, keepdims=True)
 
-        denom = np.where(gene_sum == 0, 1.0, gene_sum)
-        
-        for idx in indices:
-            col_data = X[:, idx].toarray().flatten() if issparse(X) else X[:, idx]
-            proportions[:, idx] = col_data / denom
+        X[:, indices] = X[:, indices] / (gene_sum + 1e-9)
 
-    adata.layers["isoform_proportions"] = proportions
+    adata.layers["isoform_proportions"] = X.astype(np.float32)
     return adata
