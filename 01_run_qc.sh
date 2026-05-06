@@ -24,18 +24,33 @@ RAW_GENE_H5AD="${RAW_DATA_PATH}/${DATASET_NAME}_genes.h5ad"
 RAW_TX_H5AD="${RAW_DATA_PATH}/${DATASET_NAME}_transcripts.h5ad"
 MAPPING_JSON="${RAW_DATA_PATH}/${DATASET_NAME}_gene_to_transcripts.json"
 
-QC_TABLE="${QC_PATH}/bulk_qc.csv"
+QC_TABLE="${QC_PATH}/${DATASET_NAME}_qc.csv"
 
 source "${VENV_PATH}/bin/activate"
 PYTHON_BIN="${VENV_PATH}/bin/python"
 
 cd "${PROJECT_ROOT}"
 
-PYTHONPATH="${PROJECT_ROOT}" "${PYTHON_BIN}" "${SCRIPT_DIR}/00_compute_qc.py" \
+echo "Project root: ${PROJECT_ROOT}"
+echo "Dataset name: ${DATASET_NAME}"
+echo "Gene h5ad: ${RAW_GENE_H5AD}"
+echo "Transcript h5ad: ${RAW_TX_H5AD}"
+echo "Mapping JSON: ${MAPPING_JSON}"
+echo "Output QC table: ${QC_TABLE}"
+
+PYTHONPATH="${PROJECT_ROOT}" \
+"${PYTHON_BIN}" "${SCRIPT_DIR}/00_compute_qc.py" \
   --gene-h5ad "${RAW_GENE_H5AD}" \
   --tx-h5ad "${RAW_TX_H5AD}" \
   --mapping-json "${MAPPING_JSON}" \
   --out-csv "${QC_TABLE}" \
   --gene-batch-size 500 \
   --row-block-size 512 \
-  --checkpoint-every 500
+  --checkpoint-every 500 \
+  --min-both-detected 50 \
+  --max-median-ratio 1.5 \
+  --min-corr 0.8 \
+  --max-dominant-fraction 0.9 \
+  --min-active-samples 20
+
+echo "QC job finished successfully."
