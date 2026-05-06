@@ -78,4 +78,5 @@ def get_isoform_proportions(adata, mapping):
         X[:, indices] = X[:, indices] / (gene_sum + 1e-9)
 
     adata.layers["isoform_proportions"] = X.astype(np.float32)
+    logging.info(f"Successfully generated isoform proportions.")
     return adata

@@ -17,7 +17,6 @@ REPRESENTATIONS_PATH="${PROJECT_ROOT}/data/representations"
 
 mkdir -p "${REPRESENTATIONS_PATH}"
 
-# --- Settings ---
 DATASET_NAME="${DATASET_NAME:-bulk}"
 LATENT_DIM="${LATENT_DIM:-128}"
 SEED="${SEED:-1}"
@@ -48,7 +47,7 @@ cd "${PROJECT_ROOT}"
 for REPR in ${REPRESENTATIONS}; do
   echo "---- Target Representation: ${REPR}"
 
-  REPR_DIR="${REPRESENTATIONS_PATH}/${REPR}"
+  REPR_DIR="${REPRESENTATIONS_PATH}"
   mkdir -p "${REPR_DIR}"
 
   REPR_FILE="${REPR_DIR}/${DATASET_NAME}_${REPR}_dim${LATENT_DIM}.npy"

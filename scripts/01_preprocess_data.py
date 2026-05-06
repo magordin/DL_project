@@ -44,7 +44,7 @@ def main():
     logging.info("Loading h5ad files...")
     raw_genes = ad.read_h5ad(args.gene_h5ad, backed='r')
     raw_iso = ad.read_h5ad(args.tx_h5ad, backed='r')
-    mapping = get_gene_mapping(args.mapping_json)
+    mapping = get_gene_mapping(args.mapping_json, raw_genes)
     gene_sub, iso_sub = subset_and_align_data(raw_genes, raw_iso, args.qc_csv, mapping)
 
     gene_sub = normalize(gene_sub)

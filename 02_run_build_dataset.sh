@@ -2,7 +2,7 @@
 #BSUB -J qc
 #BSUB -n 1
 #BSUB -R "rusage[mem=32GB]"
-#BSUB -W 10:00
+#BSUB -W 4:00
 #BSUB -o /zhome/bf/7/219671/projects/DL_project/results/logs/pre_%J.out
 #BSUB -e /zhome/bf/7/219671/projects/DL_project/results/logs/pre_%J.err
 
