@@ -7,9 +7,16 @@ scikit-learn
 anndata
 h5py
 tables
+
 torch
 torchvision
 torchaudio
+
 jupyter
 ipykernel
+
 scanpy
+umap-learn
+igraph
+leidenalg
+tqdm

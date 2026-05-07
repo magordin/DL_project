@@ -1,10 +1,10 @@
 #!/usr/bin/env bash
-#BSUB -J repr
+#BSUB -J repr_vae
 #BSUB -n 1
 #BSUB -R "rusage[mem=32GB]"
-#BSUB -W 02:00
-#BSUB -o /zhome/bf/7/219671/projects/DL_project/results/logs/repr_%J.out
-#BSUB -e /zhome/bf/7/219671/projects/DL_project/results/logs/repr_%J.err
+#BSUB -W 08:00
+#BSUB -o /work3/s252608/DL_project/logs/qc_%J.out
+#BSUB -e /work3/s252608/DL_project/logs/qc_%J.err
 
 set -euo pipefail
 
@@ -20,7 +20,7 @@ mkdir -p "${REPRESENTATIONS_PATH}"
 DATASET_NAME="${DATASET_NAME:-bulk}"
 LATENT_DIM="${LATENT_DIM:-128}"
 SEED="${SEED:-1}"
-REPRESENTATIONS="${REPRESENTATIONS:-raw pca vae}" 
+REPRESENTATIONS="${REPRESENTATIONS:-vae}" 
 
 INPUT_X="${PROCESSED_PATH}/${DATASET_NAME}_normalized_x_input.h5ad"
 
@@ -38,7 +38,7 @@ if [[ ! -f "${INPUT_X}" ]]; then
 fi
 
 echo "========================================"
-echo "[REPRESENTATIONS] Building PCA from 2.2k genes"
+echo "[REPRESENTATIONS] Building ${REPRESENTATIONS}"
 echo "========================================"
 echo "Input: ${INPUT_X}"
 

@@ -3,6 +3,10 @@ import numpy as np
 import argparse
 from pathlib import Path
 from scripts.src.representations import generate_pca_representation
+from scripts.src.representations import (
+    generate_pca_representation,
+    generate_vae_representation,
+)
 
 def parse_args():
     parser = argparse.ArgumentParser(description="Build representations from filtered data.")
@@ -27,8 +31,11 @@ def main():
         repr_matrix = generate_pca_representation(adata, n_comps=args.latent_dim)
         
     elif args.repr_type == "vae":
-        print("VAE logic not yet implemented, returning zeros")
-        repr_matrix = np.zeros((adata.n_obs, args.latent_dim))
+        repr_matrix = generate_vae_representation(
+            adata,
+            latent_dim=args.latent_dim,
+            seed=args.seed,
+        )
         
     else:
         raise ValueError(f"Representation {args.repr_type} not supported yet.")
