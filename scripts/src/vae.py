@@ -33,14 +33,20 @@ class GaussianVectorDecoder(nn.Module):
         self.input_dim = input_dim
 
     def forward(self, z):
-        mean = self.decoder_net(z)
+        out = self.decoder_net(z)
 
-        if mean.shape[-1] != self.input_dim:
+        expected_dim = 2 * self.input_dim
+        if out.shape[-1] != expected_dim:
             raise ValueError(
-                f"decoder_net must output (B, {self.input_dim}), got {tuple(mean.shape)}"
+                f"decoder_net must output (B, {expected_dim}), got {tuple(out.shape)}"
             )
 
-        std = torch.ones_like(mean)
+        mean, log_std = out[..., :self.input_dim], out[..., self.input_dim:]
+
+        # Important for numerical stability
+        log_std = torch.clamp(log_std, min=-6.0, max=2.0)
+        std = torch.exp(log_std)
+
         return td.Independent(td.Normal(mean, std), 1)
 
 
@@ -107,17 +113,8 @@ def train_vae_representation(
     dataset = TensorDataset(torch.from_numpy(x))
     loader = DataLoader(dataset, batch_size=batch_size, shuffle=True)
 
-    encoder_net = build_mlp(
-        input_dim=input_dim,
-        hidden_dim=hidden_dim,
-        output_dim=2 * latent_dim,
-    )
-
-    decoder_net = build_mlp(
-        input_dim=latent_dim,
-        hidden_dim=hidden_dim,
-        output_dim=input_dim,
-    )
+    encoder_net = build_mlp(input_dim, hidden_dim, 2 * latent_dim)
+    decoder_net = build_mlp(latent_dim, hidden_dim, 2 * input_dim)
 
     prior = td.Independent(
         td.Normal(
@@ -135,6 +132,8 @@ def train_vae_representation(
 
     optimizer = torch.optim.Adam(model.parameters(), lr=lr)
 
+    history = []
+
     model.train()
     for epoch in range(1, epochs + 1):
         total_loss = 0.0
@@ -146,7 +145,6 @@ def train_vae_representation(
             batch_x = batch_x.to(device)
 
             optimizer.zero_grad()
-
             _, recon, kl = model.elbo_terms(batch_x)
             loss = -(recon - beta * kl).mean()
 
@@ -159,11 +157,24 @@ def train_vae_representation(
             total_kl += kl.mean().item() * batch_size_actual
             n_seen += batch_size_actual
 
+        epoch_loss = total_loss / n_seen
+        epoch_recon = total_recon / n_seen
+        epoch_kl = total_kl / n_seen
+
+        history.append({
+            "epoch": epoch,
+            "beta": beta,
+            "loss": epoch_loss,
+            "recon": epoch_recon,
+            "kl": epoch_kl,
+        })
+
         print(
             f"Epoch {epoch:03d} | "
-            f"loss={total_loss/n_seen:.4f} | "
-            f"recon={total_recon/n_seen:.4f} | "
-            f"kl={total_kl/n_seen:.4f}"
+            f"beta={beta:.3f} | "
+            f"loss={epoch_loss:.4f} | "
+            f"recon={epoch_recon:.4f} | "
+            f"kl={epoch_kl:.4f}"
         )
 
     model.eval()
@@ -183,4 +194,4 @@ def train_vae_representation(
     if z.shape != (adata.n_obs, latent_dim):
         raise ValueError(f"Expected latent shape {(adata.n_obs, latent_dim)}, got {z.shape}")
 
-    return z
+    return z, history
