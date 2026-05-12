@@ -11,6 +11,8 @@ tables
 torch
 torchvision
 torchaudio
+performer-pytorch
+torch-geometric
 
 jupyter
 ipykernel
