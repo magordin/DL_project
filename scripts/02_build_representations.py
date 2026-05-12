@@ -1,8 +1,10 @@
-import anndata as ad
-import numpy as np
 import argparse
 from pathlib import Path
-from scripts.src.representations import generate_pca_representation
+
+import anndata as ad
+import numpy as np
+import pandas as pd
+
 from scripts.src.representations import (
     generate_pca_representation,
     generate_vae_representation,
@@ -15,6 +17,8 @@ def parse_args():
     parser.add_argument("--latent-dim", type=int, default=128)
     parser.add_argument("--seed", type=int, default=1)
     parser.add_argument("--out-file", type=str, required=True, help="Specific path for .npy output")
+    parser.add_argument("--beta", type=float, default=1.0)
+    parser.add_argument("--history-file", type=str, default=None)
     return parser.parse_args()
 
 def main():
@@ -31,10 +35,11 @@ def main():
         repr_matrix = generate_pca_representation(adata, n_comps=args.latent_dim)
         
     elif args.repr_type == "vae":
-        repr_matrix = generate_vae_representation(
+        repr_matrix, history = generate_vae_representation(
             adata,
             latent_dim=args.latent_dim,
             seed=args.seed,
+            beta=args.beta,
         )
         
     else:
@@ -45,6 +50,14 @@ def main():
     
     np.save(out_path, repr_matrix)
     print(f"Successfully saved {args.repr_type} matrix of shape {repr_matrix.shape}")
+
+    if args.repr_type == "vae" and args.history_file is not None:
+
+        history_path = Path(args.history_file)
+        history_path.parent.mkdir(parents=True, exist_ok=True)
+
+        pd.DataFrame(history).to_csv(history_path, index=False)
+        print(f"Saved VAE training history to {history_path}")
 
 if __name__ == "__main__":
     main()

@@ -29,7 +29,12 @@ def generate_pca_representation(adata, n_comps=128):
     return pca_coords.astype(np.float32)
 
     
-def generate_vae_representation(adata, latent_dim=128, seed=1):
+def generate_vae_representation(
+    adata,
+    latent_dim=128,
+    seed=1,
+    beta=1.0,
+):
     return train_vae_representation(
         adata=adata,
         latent_dim=latent_dim,
@@ -38,5 +43,5 @@ def generate_vae_representation(adata, latent_dim=128, seed=1):
         batch_size=128,
         hidden_dim=512,
         lr=1e-3,
-        beta=1.0,
+        beta=beta,
     )
