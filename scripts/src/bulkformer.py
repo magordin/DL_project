@@ -7,8 +7,8 @@ from tqdm import tqdm
 import anndata as ad
 import rich
 
-from BulkFormer import BulkFormer
-from BulkFormer_block import BulkFormer_block
+from utils.BulkFormer import BulkFormer
+from utils.BulkFormer_block import BulkFormer_block
 
 def extract_bulkformer_features(adata, latent_dim=128, checkpoint_path=None, DEVICE=None):
     if DEVICE is None:

@@ -13,8 +13,8 @@ module load cuda/12.4
 source /work3/s252608/DL_project/.venv/bin/activate
 
 export PROJECT_ROOT="/work3/s252608/DL_project"
-export PYTHONPATH="$PROJECT_ROOT:$PYTHONPATH"
-
+export BULKFORMER_DIR="$PROJECT_ROOT/BulkFormer"
+export PYTHONPATH="$PROJECT_ROOT:$BULKFORMER_DIR:$PYTHONPATH"
 cd $PROJECT_ROOT
 
 python scripts/02_build_representations.py \

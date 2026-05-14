@@ -22,7 +22,7 @@ LATENT_DIM="${LATENT_DIM:-128}"
 SEED="${SEED:-1}"
 REPRESENTATIONS="${REPRESENTATIONS:-vae}" 
 
-INPUT_X="${PROCESSED_PATH}/${DATASET_NAME}_normalized_x_input.h5ad"
+INPUT_X="${PROCESSED_PATH}/${DATASET_NAME}_normalized_x_input_CPM.h5ad"
 
 if [[ ! -d "${VENV_PATH}" ]]; then
   echo "ERROR: .venv not found at ${VENV_PATH}"
