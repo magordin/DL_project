@@ -20,7 +20,7 @@ class NumpyEncoder(json.JSONEncoder):
         return json.JSONEncoder.default(self, obj)
 
 
-def normalize(adata, target_sum=1e4):
+def normalize(adata, target_sum=1e6):
     adata.layers["raw_counts"] = adata.X.copy() 
     sc.pp.normalize_total(adata, target_sum=target_sum)
     sc.pp.log1p(adata)

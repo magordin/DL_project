@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-#BSUB -J qc
+#BSUB -J data
 #BSUB -n 1
 #BSUB -R "rusage[mem=32GB]"
 #BSUB -W 4:00

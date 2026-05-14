@@ -48,10 +48,10 @@ def main():
     gene_sub, iso_sub = subset_and_align_data(raw_genes, raw_iso, args.qc_csv, mapping)
 
     gene_sub = normalize(gene_sub)
-    iso_sub = get_isoform_proportions(iso_sub, mapping)
+    iso_sub = normalize(iso_sub)
 
-    save_adata(gene_sub, out_dir, args.data_type, "x_input")
-    save_adata(iso_sub, out_dir, args.data_type, "y_target")
+    save_adata(gene_sub, out_dir, args.data_type, "x_input_CPM")
+    save_adata(iso_sub, out_dir, args.data_type, "y_target_CPM")
     
     logging.info(f"Preprocessing for {args.data_type} complete.")
 
