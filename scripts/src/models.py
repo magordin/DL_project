@@ -9,7 +9,7 @@ class MLPRegressor(nn.Module):
         input_dim: int,
         output_dim: int,
         hidden_dim: int = 512,
-        dropout: float = 0.2,
+        dropout: float = 0.1,
         n_layers: int = 2,
     ):
         super().__init__()

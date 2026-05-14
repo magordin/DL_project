@@ -1,6 +1,9 @@
 import json
 from pathlib import Path
 from typing import Dict, Tuple
+import numpy as np
+import anndata as ad
+from scipy.sparse import issparse
 
 import anndata as ad
 import numpy as np
@@ -20,9 +23,29 @@ def load_representation(path: Path) -> np.ndarray:
     return x.astype(np.float32)
 
 
-def load_target(path: Path) -> Tuple[np.ndarray, ad.AnnData]:
-    adata = ad.read_h5ad(path)
-    y = to_dense_float32(adata.X)
+def load_target(
+    h5ad_path,
+    model_type: str = "mse",
+):
+    adata = ad.read_h5ad(h5ad_path)
+
+    if model_type in ["mse", "gaussian"]:
+        y = adata.X
+
+    elif model_type == "nb":
+        if "raw_counts" not in adata.layers:
+            raise ValueError("Expected adata.layers['raw_counts'] for NB targets.")
+
+        y = adata.layers["raw_counts"]
+
+    else:
+        raise ValueError(f"Unknown model_type: {model_type}")
+
+    if issparse(y):
+        y = y.toarray()
+
+    y = np.asarray(y, dtype=np.float32)
+
     return y, adata
 
 
