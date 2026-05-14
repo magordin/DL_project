@@ -2,9 +2,12 @@ import numpy as np
 import torch
 import torch.nn as nn
 import torch.distributions as td
-from torch.utils.data import DataLoader, TensorDataset
+from torch.utils.data import DataLoader, TensorDataset, random_split
 from scipy.sparse import issparse
 
+import pandas as pd
+
+import os
 
 class GaussianEncoder(nn.Module):
     def __init__(self, encoder_net: nn.Module, latent_dim: int):
@@ -94,14 +97,25 @@ def train_vae_representation(
     batch_size=128,
     lr=1e-3,
     beta=1.0,
+    val_fraction=0.1,
     seed=1,
     device=None,
+    output_dir=None,
+    model_name="vae",
 ):
     torch.manual_seed(seed)
     np.random.seed(seed)
 
     if device is None:
         device = "cuda" if torch.cuda.is_available() else "cpu"
+
+    if output_dir is not None:
+        os.makedirs(output_dir, exist_ok=True)
+        best_model_path = os.path.join(output_dir, f"{model_name}_best.pt")
+        history_path = os.path.join(output_dir, f"{model_name}_history.csv")
+    else:
+        best_model_path = None
+        history_path = None
 
     x = adata.X
     if issparse(x):
@@ -111,7 +125,24 @@ def train_vae_representation(
     input_dim = x.shape[1]
 
     dataset = TensorDataset(torch.from_numpy(x))
-    loader = DataLoader(dataset, batch_size=batch_size, shuffle=True)
+
+    n_total = len(dataset)
+    n_val = int(val_fraction * n_total)
+    n_train = n_total - n_val
+
+    if n_val == 0:
+        raise ValueError("Validation set is empty. Increase dataset size or val_fraction.")
+
+    generator = torch.Generator().manual_seed(seed)
+
+    train_dataset, val_dataset = random_split(
+        dataset,
+        [n_train, n_val],
+        generator=generator,
+    )
+
+    train_loader = DataLoader(train_dataset, batch_size=batch_size, shuffle=True)
+    val_loader = DataLoader(val_dataset, batch_size=batch_size, shuffle=False)
 
     encoder_net = build_mlp(input_dim, hidden_dim, 2 * latent_dim)
     decoder_net = build_mlp(latent_dim, hidden_dim, 2 * input_dim)
@@ -133,18 +164,48 @@ def train_vae_representation(
     optimizer = torch.optim.Adam(model.parameters(), lr=lr)
 
     history = []
+    best_val_loss = float("inf")
 
-    model.train()
-    for epoch in range(1, epochs + 1):
+    def evaluate(loader):
+        model.eval()
+
         total_loss = 0.0
         total_recon = 0.0
         total_kl = 0.0
         n_seen = 0
 
-        for (batch_x,) in loader:
+        with torch.no_grad():
+            for (batch_x,) in loader:
+                batch_x = batch_x.to(device)
+
+                _, recon, kl = model.elbo_terms(batch_x)
+                loss = -(recon - beta * kl).mean()
+
+                batch_size_actual = batch_x.shape[0]
+                total_loss += loss.item() * batch_size_actual
+                total_recon += recon.mean().item() * batch_size_actual
+                total_kl += kl.mean().item() * batch_size_actual
+                n_seen += batch_size_actual
+
+        return (
+            total_loss / n_seen,
+            total_recon / n_seen,
+            total_kl / n_seen,
+        )
+
+    for epoch in range(1, epochs + 1):
+        model.train()
+
+        total_loss = 0.0
+        total_recon = 0.0
+        total_kl = 0.0
+        n_seen = 0
+
+        for (batch_x,) in train_loader:
             batch_x = batch_x.to(device)
 
             optimizer.zero_grad()
+
             _, recon, kl = model.elbo_terms(batch_x)
             loss = -(recon - beta * kl).mean()
 
@@ -157,25 +218,46 @@ def train_vae_representation(
             total_kl += kl.mean().item() * batch_size_actual
             n_seen += batch_size_actual
 
-        epoch_loss = total_loss / n_seen
-        epoch_recon = total_recon / n_seen
-        epoch_kl = total_kl / n_seen
+        train_loss = total_loss / n_seen
+        train_recon = total_recon / n_seen
+        train_kl = total_kl / n_seen
+
+        val_loss, val_recon, val_kl = evaluate(val_loader)
+
+        if val_loss < best_val_loss:
+            best_val_loss = val_loss
+
+            if best_model_path is not None:
+                torch.save(model.state_dict(), best_model_path)
 
         history.append({
             "epoch": epoch,
             "beta": beta,
-            "loss": epoch_loss,
-            "recon": epoch_recon,
-            "kl": epoch_kl,
+            "train_loss": train_loss,
+            "train_recon": train_recon,
+            "train_kl": train_kl,
+            "val_loss": val_loss,
+            "val_recon": val_recon,
+            "val_kl": val_kl,
+            "best_val_loss": best_val_loss,
         })
 
         print(
             f"Epoch {epoch:03d} | "
             f"beta={beta:.3f} | "
-            f"loss={epoch_loss:.4f} | "
-            f"recon={epoch_recon:.4f} | "
-            f"kl={epoch_kl:.4f}"
+            f"train_loss={train_loss:.4f} | "
+            f"train_recon={train_recon:.4f} | "
+            f"train_kl={train_kl:.4f} | "
+            f"val_loss={val_loss:.4f} | "
+            f"val_recon={val_recon:.4f} | "
+            f"val_kl={val_kl:.4f}"
         )
+
+    if history_path is not None:
+        pd.DataFrame(history).to_csv(history_path, index=False)
+
+    if best_model_path is not None:
+        model.load_state_dict(torch.load(best_model_path, map_location=device))
 
     model.eval()
     latent_batches = []

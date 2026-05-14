@@ -1,10 +1,10 @@
 #!/usr/bin/env bash
-#BSUB -J repr_vae_beta
+#BSUB -J repr_vae_beta_train
 #BSUB -n 1
 #BSUB -R "rusage[mem=32GB]"
 #BSUB -W 08:00
-#BSUB -o /work3/s252608/DL_project/logs/vae_beta_%J.out
-#BSUB -e /work3/s252608/DL_project/logs/vae_beta_%J.err
+#BSUB -o /work3/s252608/DL_project/logs/vae_beta_wtrain%J.out
+#BSUB -e /work3/s252608/DL_project/logs/vae_beta_wtrain%J.err
 
 set -euo pipefail
 
@@ -13,16 +13,15 @@ VENV_PATH="${PROJECT_ROOT}/.venv"
 
 PROCESSED_PATH="${PROJECT_ROOT}/data/processed"
 REPRESENTATIONS_PATH="${PROJECT_ROOT}/data/representations"
-HISTORY_PATH="${PROJECT_ROOT}/results/vae_history"
 
-mkdir -p "${REPRESENTATIONS_PATH}" "${HISTORY_PATH}" "${PROJECT_ROOT}/logs"
+mkdir -p "${REPRESENTATIONS_PATH}" "${PROJECT_ROOT}/logs"
 
 DATASET_NAME="${DATASET_NAME:-bulk}"
 LATENT_DIM="${LATENT_DIM:-128}"
 SEED="${SEED:-1}"
 BETAS="${BETAS:-0.1 0.3 0.5 1.0}"
 
-INPUT_X="${PROCESSED_PATH}/${DATASET_NAME}_normalized_x_input.h5ad"
+INPUT_X="${PROCESSED_PATH}/${DATASET_NAME}_normalized_x_input_CPM.h5ad"
 
 if [[ ! -d "${VENV_PATH}" ]]; then
   echo "ERROR: .venv not found at ${VENV_PATH}"
@@ -51,7 +50,6 @@ for BETA in ${BETAS}; do
   BETA_TAG="${BETA//./p}"
 
   REPR_FILE="${REPRESENTATIONS_PATH}/${DATASET_NAME}_vae_dim${LATENT_DIM}_beta${BETA_TAG}.npy"
-  HISTORY_FILE="${HISTORY_PATH}/${DATASET_NAME}_vae_dim${LATENT_DIM}_beta${BETA_TAG}.csv"
 
   "${PYTHON_BIN}" -m scripts.02_build_representations \
     --input-h5ad "${INPUT_X}" \
@@ -59,11 +57,11 @@ for BETA in ${BETAS}; do
     --latent-dim "${LATENT_DIM}" \
     --seed "${SEED}" \
     --beta "${BETA}" \
-    --out-file "${REPR_FILE}" \
-    --history-file "${HISTORY_FILE}"
+    --out-file "${REPR_FILE}"
 
   echo "Saved representation: ${REPR_FILE}"
-  echo "Saved history: ${HISTORY_FILE}"
+  echo "Saved model: ${REPRESENTATIONS_PATH}/${DATASET_NAME}_vae_dim${LATENT_DIM}_beta${BETA_TAG}_best.pt"
+  echo "Saved history: ${REPRESENTATIONS_PATH}/${DATASET_NAME}_vae_dim${LATENT_DIM}_beta${BETA_TAG}_history.csv"
 done
 
 echo "VAE beta sweep complete."

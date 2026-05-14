@@ -35,8 +35,10 @@ def generate_vae_representation(
     latent_dim=128,
     seed=1,
     beta=1.0,
+    output_dir=None,
+    model_name="bulk_vae_dim128",
 ):
-    return train_vae_representation(
+    z, history = train_vae_representation(
         adata=adata,
         latent_dim=latent_dim,
         seed=seed,
@@ -45,7 +47,11 @@ def generate_vae_representation(
         hidden_dim=512,
         lr=1e-3,
         beta=beta,
+        val_fraction=0.1,
+        output_dir=output_dir,
+        model_name=model_name,
     )
+    return z, history
 
 def generate_bf_representations(adata, latent_dim = 128):
     return extract_bulkformer_features(

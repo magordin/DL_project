@@ -36,11 +36,17 @@ def main():
         repr_matrix = generate_pca_representation(adata, n_comps=args.latent_dim)
         
     elif args.repr_type == "vae":
+
+        output_dir = str(Path(args.out_file).parent)
+        model_name = Path(args.out_file).stem
+
         repr_matrix, history = generate_vae_representation(
             adata,
             latent_dim=args.latent_dim,
             seed=args.seed,
             beta=args.beta,
+            output_dir=output_dir,
+            model_name=model_name,
         )
     
     elif args.repr_type == "bulkformer":
@@ -54,14 +60,6 @@ def main():
     
     np.save(out_path, repr_matrix)
     print(f"Successfully saved {args.repr_type} matrix of shape {repr_matrix.shape}")
-
-    if args.repr_type == "vae" and args.history_file is not None:
-
-        history_path = Path(args.history_file)
-        history_path.parent.mkdir(parents=True, exist_ok=True)
-
-        pd.DataFrame(history).to_csv(history_path, index=False)
-        print(f"Saved VAE training history to {history_path}")
 
 if __name__ == "__main__":
     main()
