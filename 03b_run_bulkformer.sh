@@ -12,6 +12,13 @@
 module load cuda/12.4
 source /work3/s252608/DL_project/.venv/bin/activate
 
-export PYTHONPATH="/work3/s252608/DL_project/BulkFormer:$PYTHONPATH"
-cd /work3/s252608/DL_project/BulkFormer
-python /work3/s252608/DL_project/BulkFormer/utils/inference_final.py
+export PROJECT_ROOT="/work3/s252608/DL_project"
+export PYTHONPATH="$PROJECT_ROOT:$PYTHONPATH"
+
+cd $PROJECT_ROOT
+
+python scripts/02_build_representations.py \
+    --input-h5ad "$PROJECT_ROOT/data/processed/bulk_normalized_x_input_CPM.h5ad" \
+    --repr-type bulkformer \
+    --latent-dim 128 \
+    --out-file "$PROJECT_ROOT/data/representations/bulkformer_representations.npy"

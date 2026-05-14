@@ -6,6 +6,7 @@ import logging
 
 from scipy.sparse import issparse
 from scripts.src.vae import train_vae_representation
+from scripts.src.bulkformer import extract_bulkformer_features
 
 def generate_pca_representation(adata, n_comps=128):
     sparse_input = issparse(adata.X)
@@ -44,4 +45,10 @@ def generate_vae_representation(
         hidden_dim=512,
         lr=1e-3,
         beta=beta,
+    )
+
+def generate_bf_representations(adata, latent_dim = 128):
+    return extract_bulkformer_features(
+        adata = adata,
+        latent_dim = latent_dim
     )

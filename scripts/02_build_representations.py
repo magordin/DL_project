@@ -8,12 +8,13 @@ import pandas as pd
 from scripts.src.representations import (
     generate_pca_representation,
     generate_vae_representation,
+    generate_bf_representations
 )
 
 def parse_args():
     parser = argparse.ArgumentParser(description="Build representations from filtered data.")
     parser.add_argument("--input-h5ad", type=str, required=True, help="Path to input X h5ad")
-    parser.add_argument("--repr-type", type=str, required=True, choices=["raw", "pca", "vae", "geneformer"])
+    parser.add_argument("--repr-type", type=str, required=True, choices=["raw", "pca", "vae", "bulkformer"])
     parser.add_argument("--latent-dim", type=int, default=128)
     parser.add_argument("--seed", type=int, default=1)
     parser.add_argument("--out-file", type=str, required=True, help="Specific path for .npy output")
@@ -41,7 +42,10 @@ def main():
             seed=args.seed,
             beta=args.beta,
         )
-        
+    
+    elif args.repr_type == "bulkformer":
+        repr_matrix = generate_bf_representations(adata, latent_dim=args.latent_dim)
+
     else:
         raise ValueError(f"Representation {args.repr_type} not supported yet.")
 
