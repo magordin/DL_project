@@ -49,6 +49,9 @@ def extract_bulkformer_features(adata, latent_dim=128, checkpoint_path=None, DEV
         for i in tqdm(range(0, N_samples, batch_size)):
             batch_x = X[i : i + batch_size].to(DEVICE)
             out = model(batch_x)
+            if i == 0:
+                print(f"SHAPE CHECK - Raw Output: {out.shape}")
+                print(f"SHAPE CHECK - Max Pooled: {out.max(dim=1).values.shape}")
             pooled_out = out.max(dim=1).values
             all_embeddings.append(pooled_out.cpu().numpy())
 
