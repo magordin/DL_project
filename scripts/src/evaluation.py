@@ -1,5 +1,5 @@
 from pathlib import Path
-from typing import Dict
+from typing import Dict, Tuple
 
 import anndata as ad
 import numpy as np
@@ -8,13 +8,32 @@ import torch
 from scipy.stats import pearsonr, spearmanr
 from torch.utils.data import DataLoader, TensorDataset
 
-from src.models import MLPRegressor
+from src.models import (
+    MLPRegressor,
+    MLPGaussianRegressor,
+    MLPNegativeBinomial,
+)
 
 
-def load_model_from_checkpoint(path: Path, device: torch.device) -> tuple:
-    checkpoint = torch.load(path, map_location="cpu")
+def load_model_from_checkpoint(path: Path, device: torch.device) -> Tuple[torch.nn.Module, dict]:
+    checkpoint = torch.load(
+        path,
+        map_location="cpu",
+        weights_only=False,
+    )
 
-    model = MLPRegressor(
+    model_type = checkpoint.get("model_type", "mse")
+
+    model_classes = {
+        "mse": MLPRegressor,
+        "gaussian": MLPGaussianRegressor,
+        "nb": MLPNegativeBinomial,
+    }
+
+    if model_type not in model_classes:
+        raise ValueError(f"Unknown model_type in checkpoint: {model_type}")
+
+    model = model_classes[model_type](
         input_dim=checkpoint["input_dim"],
         output_dim=checkpoint["output_dim"],
         hidden_dim=checkpoint["hidden_dim"],
@@ -28,13 +47,29 @@ def load_model_from_checkpoint(path: Path, device: torch.device) -> tuple:
     return model, checkpoint
 
 
+def extract_prediction(output, model_type: str) -> torch.Tensor:
+    if model_type == "mse":
+        return output
+
+    if model_type == "gaussian":
+        mean, std = output
+        return mean
+
+    if model_type == "nb":
+        mu, theta = output
+        return mu
+
+    raise ValueError(f"Unknown model_type: {model_type}")
+
+
 def predict_array(
     model: torch.nn.Module,
     x: np.ndarray,
     batch_size: int,
     device: torch.device,
+    model_type: str = "mse",
 ) -> np.ndarray:
-    dataset = TensorDataset(torch.from_numpy(x))
+    dataset = TensorDataset(torch.from_numpy(x).float())
     loader = DataLoader(dataset, batch_size=batch_size, shuffle=False)
 
     preds = []
@@ -42,8 +77,11 @@ def predict_array(
     with torch.no_grad():
         for (xb,) in loader:
             xb = xb.to(device)
-            pred = model(xb).cpu().numpy()
-            preds.append(pred)
+
+            output = model(xb)
+            pred = extract_prediction(output, model_type)
+
+            preds.append(pred.cpu().numpy())
 
     return np.vstack(preds).astype(np.float32)
 
@@ -99,6 +137,7 @@ def evaluate_predictions(
 
     for split_name, idx in split.items():
         idx = np.asarray(idx)
+
         rows.append(
             compute_metrics_for_split(
                 y_true=y_true[idx],
