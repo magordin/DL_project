@@ -20,8 +20,12 @@ def make_loaders(
     y: np.ndarray,
     split: Dict[str, list],
     batch_size: int,
+    seed: int = 1,
 ) -> Dict[str, DataLoader]:
     loaders = {}
+
+    generator = torch.Generator()
+    generator.manual_seed(seed)
 
     for split_name, idx in split.items():
         idx = np.asarray(idx)
@@ -35,6 +39,7 @@ def make_loaders(
             dataset,
             batch_size=batch_size,
             shuffle=(split_name == "train"),
+            generator=generator if split_name == "train" else None,
         )
 
     return loaders
@@ -101,8 +106,15 @@ def train_mlp(
     epochs: int,
     device: torch.device,
     model_type: str = "mse",
+    seed: int = 1,
 ) -> Tuple[nn.Module, pd.DataFrame, float]:
-    loaders = make_loaders(x, y, split, batch_size)
+    loaders = make_loaders(
+        x=x,
+        y=y,
+        split=split,
+        batch_size=batch_size,
+        seed=seed,
+    )
 
     if model_type == "mse":
         model = MLPRegressor(
