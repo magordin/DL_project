@@ -22,11 +22,11 @@ mkdir -p "${MODEL_ROOT}"
 
 DATASET_NAME="${DATASET_NAME:-bulk}"
 TARGET_MODE="${TARGET_MODE:-absolute}"
-LATENT_DIM="${LATENT_DIM:-128}"
+LATENT_DIM="${LATENT_DIM:-131}"
 
 Y_TARGET="${PROCESSED_PATH}/${DATASET_NAME}_normalized_y_target_CPM.h5ad"
 
-REPRESENTATIONS="${REPRESENTATIONS:-raw pca vae}"
+REPRESENTATIONS="${REPRESENTATIONS:-bulkformer}"
 MODEL_TYPES="${MODEL_TYPES:-mse gaussian nb}"
 
 VAE_BETAS="${VAE_BETAS:-0p1 0p3 0p5 1p0}"
@@ -80,6 +80,10 @@ for REPR in ${REPRESENTATIONS}; do
       vae)
         REPR_FILE="${REPRESENTATIONS_PATH}/${DATASET_NAME}_vae_dim${LATENT_DIM}_beta${VARIANT}.npy"
         REPR_TAG="vae_beta${VARIANT}"
+        ;;
+      bulkformer)
+        REPR_FILE="${REPRESENTATIONS_PATH}/${DATASET_NAME}_bulkformer_dim131.npy"
+        REPR_TAG="bulkformer"
         ;;
       *)
         echo "ERROR: unknown representation: ${REPR}"

@@ -44,8 +44,15 @@ def main():
     print(f"Device: {device}")
 
     x = load_representation(args.input_repr)
-    y, target_adata = load_target(args.target_h5ad)
     split = load_split(args.split_json)
+
+    model, checkpoint = load_model_from_checkpoint(args.model_path, device)
+    model_type = checkpoint.get("model_type", "mse")
+
+    y, target_adata = load_target(
+        args.target_h5ad,
+        model_type=model_type,
+    )
 
     if args.eval_split not in split:
         raise ValueError(
@@ -54,9 +61,6 @@ def main():
         )
 
     eval_idx = split[args.eval_split]
-
-    model, checkpoint = load_model_from_checkpoint(args.model_path, device)
-    model_type = checkpoint.get("model_type", "mse")
 
     print(f"Model type: {model_type}")
     print(f"Evaluation split: {args.eval_split}")

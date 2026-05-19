@@ -4,7 +4,7 @@
 #BSUB -gpu "num=1:mode=exclusive_process"
 #BSUB -n 4
 #BSUB -R "rusage[mem=64GB]"
-#BSUB -W 12:00
+#BSUB -W 6:00
 #BSUB -o /work3/s252608/DL_project/logs/models_eval_%J.out
 #BSUB -e /work3/s252608/DL_project/logs/models_eval_%J.err
 
@@ -21,11 +21,12 @@ MODEL_ROOT="${PROJECT_ROOT}/data/output/model"
 DATASET_NAME="${DATASET_NAME:-bulk}"
 TARGET_MODE="${TARGET_MODE:-absolute}"
 LATENT_DIM="${LATENT_DIM:-128}"
+BULKFORMER_DIM="${BULKFORMER_DIM:-131}"
 
 Y_TARGET="${PROCESSED_PATH}/${DATASET_NAME}_normalized_y_target_CPM.h5ad"
 
 REPRESENTATIONS="${REPRESENTATIONS:-raw pca vae}"
-MODEL_TYPES="${MODEL_TYPES:-mse gaussian nb}"
+MODEL_TYPES="${MODEL_TYPES:-nb}"
 VAE_BETAS="${VAE_BETAS:-0p1 0p3 0p5 1p0}"
 
 SEEDS="${SEEDS:-1}"
@@ -60,6 +61,10 @@ for REPR in ${REPRESENTATIONS}; do
       vae)
         REPR_FILE="${REPRESENTATIONS_PATH}/${DATASET_NAME}_vae_dim${LATENT_DIM}_beta${VARIANT}.npy"
         REPR_TAG="vae_beta${VARIANT}"
+        ;;
+      bulkformer)
+        REPR_FILE="${REPRESENTATIONS_PATH}/${DATASET_NAME}_bulkformer_dim${BULKFORMER_DIM}.npy"
+        REPR_TAG="bulkformer"
         ;;
       *)
         echo "ERROR: unknown representation: ${REPR}"
