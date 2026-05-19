@@ -76,7 +76,14 @@ python scripts/02_build_representations.py \
 
 ## BulkFormer integration
 
-The `BulkFormer/` folder contains the model implementation, a pretrained checkpoint at `BulkFormer/model/Bulkformer_ckpt_epoch_29.pt`, and utilities used by `scripts/src/bulkformer.py`.
+BulkFormer is used as an external dependency for zero-shot representation extraction. For the pipeline to run correctly, the BulkFormer repository must be placed in the project root as:
+
+```text
+DL_project/
+├── BulkFormer/
+├── scripts/
+├── data/
+└── ...
 
 ## Dependencies
 
